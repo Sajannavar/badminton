@@ -31,6 +31,7 @@
   .sh-bar i { display:block; height:100%; width:40%; border-radius:4px; background:linear-gradient(90deg,#F2B705,#FFD54F); animation:bb 1.3s ease-in-out infinite; }
   @keyframes bb { 0% { transform:translateX(-110%); } 100% { transform:translateX(260%); } }
   .sh-msg { font-weight:700; letter-spacing:.3px; opacity:.9; }
+  .sh-retry { font:inherit; font-size:15px; font-weight:700; min-height:44px; padding:10px 22px; border-radius:12px; border:0; background:#01579B; color:#fff; cursor:pointer; }
   @media (prefers-reduced-motion: reduce) { .sh-rally, .sh-rally svg, .sh-bar i { animation:none; } }
 </style>
 </head>
@@ -52,7 +53,7 @@ window.__PLAYER_SHELL = true;
 // for the page's "Install as an app" button, and the service worker makes
 // the page installable.
 window.addEventListener('beforeinstallprompt', function(e) { e.preventDefault(); window.__installPrompt = e; });
-if ('serviceWorker' in navigator && location.protocol === 'https:') {
+if ('serviceWorker' in navigator && (window.isSecureContext || location.protocol === 'https:')) {
   window.addEventListener('load', function() { navigator.serviceWorker.register('sw.js').catch(function() { /* optional */ }); });
 }
 (function() {
@@ -72,10 +73,16 @@ if ('serviceWorker' in navigator && location.protocol === 'https:') {
     return /^[A-Za-z0-9]{24,128}$/.test(t) ? t : '';
   }
 
+  // No request waits forever: a stuck connection fails after this long, so
+  // the page can say so and offer "Try again" (§131).
+  var TIMEOUT_MS = 30000;
   function call(body) {
+    var ctl = typeof AbortController === 'function' ? new AbortController() : null;
+    var timer = ctl ? setTimeout(function() { ctl.abort(); }, TIMEOUT_MS) : null;
     // text/plain = a "simple" request, so no CORS preflight (Apps Script can't answer one).
-    return fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body), redirect: 'follow', credentials: 'omit' })
-      .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });
+    return fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body), redirect: 'follow', credentials: 'omit', signal: ctl ? ctl.signal : undefined })
+      .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(function(j) { clearTimeout(timer); return j; }, function(e) { clearTimeout(timer); throw e; });
   }
 
   // Stand-in for google.script.run, so the page runs here unchanged.
@@ -100,11 +107,18 @@ if ('serviceWorker' in navigator && location.protocol === 'https:') {
   }
   window.google = { script: { get run() { return runner(null, null); } } };
 
-  function fail(msg) {
+  // The installed app has no reload button, so every failure offers one.
+  function fail(msg, canRetry) {
     var box = document.createElement('div'); box.className = 'sh-boot err';
     var icon = document.createElement('div'); icon.style.fontSize = '40px'; icon.textContent = '🏸';
     var p = document.createElement('div'); p.textContent = msg;
     box.appendChild(icon); box.appendChild(p);
+    if (canRetry) {
+      var b = document.createElement('button'); b.type = 'button'; b.className = 'sh-retry'; b.textContent = '↻ Try again';
+      b.onclick = function() { location.reload(); };
+      box.appendChild(b);
+      window.addEventListener('online', function() { location.reload(); }, { once: true });
+    }
     var app = document.getElementById('app'); app.innerHTML = ''; app.appendChild(box);
   }
 
@@ -131,7 +145,9 @@ if ('serviceWorker' in navigator && location.protocol === 'https:') {
   }).then(function(res) {
     if (!res || !res.html) throw new Error('no page');
     mount(res.html);
-  }).catch(function() { fail('Couldn’t load — check your connection and try again.'); });
+  }).catch(function() {
+    fail(navigator.onLine === false ? 'You’re offline — connect to the internet and try again.' : 'Couldn’t load — check your connection and try again.', true);
+  });
 })();
 </script>
 </body>

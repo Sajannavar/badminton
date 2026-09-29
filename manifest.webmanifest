@@ -1,12 +1,15 @@
 {
   "name": "My Badminton",
   "short_name": "Badminton",
+  "lang": "en-IN",
+  "categories": ["sports", "lifestyle"],
   "description": "Your club balance, games, sign-ups and tournaments.",
+  "id": "./",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "orientation": "portrait",
-  "background_color": "#f4f1ea",
+  "orientation": "any",
+  "background_color": "#16202E",
   "theme_color": "#1e2a3f",
   "icons": [
     { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
