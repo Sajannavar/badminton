@@ -50,6 +50,7 @@
  */
 var API = 'https://script.google.com/macros/s/AKfycbwa8rz3l1Qpbhz8o4kQC6lu3uoeOs01cuWexfLgkbDPhfPyR9SCKR5h4l_JmYw4JpfCVQ/exec';
 window.__PLAYER_SHELL = true;
+window.__PLAYER_API = API;
 // Installed-app support (§124): the install prompt (Android/Chrome) is kept
 // for the page's "Install as an app" button, and the service worker makes
 // the page installable.
@@ -145,8 +146,12 @@ if ('serviceWorker' in navigator && (window.isSecureContext || location.protocol
     return call({ fn: 'page', token: token });
   }).then(function(res) {
     if (!res || !res.html) throw new Error('no page');
+    try { localStorage.setItem('mb_page', res.html); } catch (e) { /* storage full or blocked */ }
     mount(res.html);
   }).catch(function() {
+    // No signal? Open the page saved last time; it shows this phone's last copy of your page (§133).
+    var saved = ''; try { saved = token && localStorage.getItem('mb_snap_' + token.slice(0, 12)) ? localStorage.getItem('mb_page') || '' : ''; } catch (e) { /* */ }
+    if (saved && /id="app"/.test(saved) && saved.indexOf("'" + token + "'") !== -1) { boot = null; mount(saved); return; }
     fail(navigator.onLine === false ? 'You’re offline — connect to the internet and try again.' : 'Couldn’t load — check your connection and try again.', true);
   });
 })();
