@@ -16,27 +16,28 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <style>
   body { margin:0; background:#f4f1ea; color:#1f2a37; font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; }
-  .sh-boot { min-height:100vh; min-height:100dvh; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; padding:24px; text-align:center;
-    background:radial-gradient(900px 500px at 50% 30%, #243449 0%, #16202E 72%); color:#fff; font-size:15px; }
-  .sh-boot.err { background:#f4f1ea; color:#B0140A; }
-  .sh-court { position:relative; width:240px; height:130px; }
-  .sh-net { position:absolute; left:50%; bottom:0; width:3px; height:48px; margin-left:-1.5px; border-radius:2px; background:repeating-linear-gradient(to bottom, rgba(255,255,255,.85) 0 3px, rgba(255,255,255,.25) 3px 6px); }
+  /* Same loader as the admin app's opening splash (#boot-splash in the admin sidebar) — keep them in step. */
+  .sh-boot { min-height:100vh; min-height:100dvh; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px; padding:24px; box-sizing:border-box; text-align:center;
+    background:radial-gradient(1200px 600px at 50% 30%, #243449 0%, #16202E 70%); color:#fff; font-size:15px; line-height:normal; }
+  .sh-court { position:relative; width:260px; height:140px; }
+  .sh-net { position:absolute; left:50%; bottom:0; width:3px; height:50px; margin-left:-1.5px; border-radius:2px; background:repeating-linear-gradient(to bottom, rgba(255,255,255,.85) 0 3px, rgba(255,255,255,.25) 3px 6px); }
   .sh-net::after { content:''; position:absolute; left:-60px; right:-60px; bottom:-2px; height:2px; background:rgba(255,255,255,.18); border-radius:2px; }
-  .sh-rally { position:absolute; left:50%; top:0; width:52px; height:52px; margin-left:-26px; animation:rx 1.6s ease-in-out infinite alternate; }
-  .sh-rally svg { width:100%; height:100%; transform-origin:50% 60%; animation:ry .8s cubic-bezier(.3,0,.7,1) infinite alternate, rt 1.6s ease-in-out infinite alternate; }
-  @keyframes rx { from { transform:translateX(-95px); } to { transform:translateX(95px); } }
-  @keyframes ry { from { translate:0 66px; } to { translate:0 0; } }
-  @keyframes rt { from { rotate:-70deg; } to { rotate:70deg; } }
-  .sh-bar { width:170px; height:4px; border-radius:4px; background:rgba(255,255,255,.12); overflow:hidden; }
-  .sh-bar i { display:block; height:100%; width:40%; border-radius:4px; background:linear-gradient(90deg,#F2B705,#FFD54F); animation:bb 1.3s ease-in-out infinite; }
-  @keyframes bb { 0% { transform:translateX(-110%); } 100% { transform:translateX(260%); } }
-  .sh-msg { font-weight:700; letter-spacing:.3px; opacity:.9; }
-  .sh-retry { font:inherit; font-size:15px; font-weight:700; min-height:44px; padding:10px 22px; border-radius:12px; border:0; background:#01579B; color:#fff; cursor:pointer; }
+  .sh-rally { position:absolute; left:50%; top:0; width:56px; height:56px; margin-left:-28px; animation:sh-rx 1.6s ease-in-out infinite alternate; }
+  .sh-rally svg { width:100%; height:100%; transform-origin:50% 60%; animation:sh-ry .8s cubic-bezier(.3,0,.7,1) infinite alternate, sh-rt 1.6s ease-in-out infinite alternate; }
+  @keyframes sh-rx { from { transform:translateX(-100px); } to { transform:translateX(100px); } }
+  @keyframes sh-ry { from { translate:0 70px; } to { translate:0 0; } }
+  @keyframes sh-rt { from { rotate:-70deg; } to { rotate:70deg; } }
+  .sh-msg { font-family:'Inter','Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif; font-weight:700; font-size:15px; letter-spacing:.3px; opacity:.9; }
+  .sh-bar { width:180px; height:4px; border-radius:4px; background:rgba(255,255,255,.12); overflow:hidden; }
+  .sh-bar i { display:block; height:100%; width:40%; border-radius:4px; background:linear-gradient(90deg,#F2B705,#FFD54F); animation:sh-bb 1.3s ease-in-out infinite; }
+  @keyframes sh-bb { 0% { transform:translateX(-110%); } 100% { transform:translateX(260%); } }
   @media (prefers-reduced-motion: reduce) { .sh-rally, .sh-rally svg, .sh-bar i { animation:none; } }
+  .sh-boot.err { background:#f4f1ea; color:#B0140A; }
+  .sh-retry { font:inherit; font-size:15px; font-weight:700; min-height:44px; padding:10px 22px; border-radius:12px; border:0; background:#01579B; color:#fff; cursor:pointer; }
 </style>
 </head>
 <body>
-<div id="app"><div class="sh-boot" role="status"><div class="sh-court"><div class="sh-rally"><svg viewBox="0 0 64 64" aria-hidden="true"><path d="M14 6 L50 6 L39 40 L25 40 Z" fill="#DDE9F5"/><g stroke="#01579B" stroke-width="2.2" stroke-linecap="round"><path d="M14 6 L25 40"/><path d="M23 6 L28.5 40"/><path d="M32 6 L32 40"/><path d="M41 6 L35.5 40"/><path d="M50 6 L39 40"/><path d="M16.5 16 L47.5 16"/><path d="M20 28 L44 28"/><path d="M14 6 L50 6"/></g><path d="M24 40 h16 v4 a8 8 0 0 1 -16 0 Z" fill="#F2B705"/></svg></div><div class="sh-net"></div></div><div class="sh-msg">Opening your page…</div><div class="sh-bar"><i></i></div></div></div>
+<div id="app"><div class="sh-boot" role="status" aria-live="polite"><div class="sh-court"><div class="sh-rally"><svg viewBox="0 0 64 64" aria-hidden="true"><path d="M14 6 L50 6 L39 40 L25 40 Z" fill="#DDE9F5"/><g stroke="#01579B" stroke-width="2.2" stroke-linecap="round"><path d="M14 6 L25 40"/><path d="M23 6 L28.5 40"/><path d="M32 6 L32 40"/><path d="M41 6 L35.5 40"/><path d="M50 6 L39 40"/><path d="M16.5 16 L47.5 16"/><path d="M20 28 L44 28"/><path d="M14 6 L50 6"/></g><path d="M24 40 h16 v4 a8 8 0 0 1 -16 0 Z" fill="#F2B705"/></svg></div><div class="sh-net"></div></div><div class="sh-msg">Getting your club ready…</div><div class="sh-bar"><i></i></div></div></div>
 <script>
 /*
  * Player page shell (ARCHITECTURE.md §119). This file never changes: it
