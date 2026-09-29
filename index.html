@@ -58,6 +58,13 @@ window.addEventListener('beforeinstallprompt', function(e) { e.preventDefault();
 if ('serviceWorker' in navigator && (window.isSecureContext || location.protocol === 'https:')) {
   window.addEventListener('load', function() { navigator.serviceWorker.register('sw.js').catch(function() { /* optional */ }); });
 }
+// The start-up message in the player's language (§135).
+(function() {
+  var l = ''; try { l = localStorage.getItem('mb_lang') || ''; } catch (e) { /* */ }
+  var msg = { hi: 'आपका क्लब तैयार हो रहा है…', mr: 'तुमचा क्लब तयार होत आहे…' }[l];
+  var el = document.querySelector('.sh-msg');
+  if (msg && el) { el.textContent = msg; document.documentElement.lang = l; }
+})();
 (function() {
   function tokenFromUrl() {
     var m = /(?:^|[#&?])t=([A-Za-z0-9]{24,128})(?:&|$)/.exec(location.hash) || /(?:^|[#&?])t=([A-Za-z0-9]{24,128})(?:&|$)/.exec(location.search);
