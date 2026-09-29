@@ -1,7 +1,7 @@
 /* Player page service worker (ARCHITECTURE.md §124): makes the page
    installable and opens the shell even on a bad connection. Only this
    site's own files are cached — never the club's data (that comes from Google). */
-var CACHE = 'mb-shell-v1';
+var CACHE = 'mb-shell-v2';
 var SHELL = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './icon-maskable-512.png', './apple-touch-icon.png'];
 
 self.addEventListener('install', function(e) {

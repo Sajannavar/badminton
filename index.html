@@ -16,14 +16,26 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <style>
   body { margin:0; background:#f4f1ea; color:#1f2a37; font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; }
-  .boot { text-align:center; padding:70px 16px; color:#5f6b7a; font-size:15px; }
-  .boot b { display:block; font-size:40px; margin-bottom:8px; animation:bob 1.2s ease-in-out infinite; }
-  .boot.err { color:#B0140A; } .boot.err b { animation:none; }
-  @keyframes bob { 50% { transform:translateY(-6px); } }
+  .sh-boot { min-height:100vh; min-height:100dvh; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; padding:24px; text-align:center;
+    background:radial-gradient(900px 500px at 50% 30%, #243449 0%, #16202E 72%); color:#fff; font-size:15px; }
+  .sh-boot.err { background:#f4f1ea; color:#B0140A; }
+  .sh-court { position:relative; width:240px; height:130px; }
+  .sh-net { position:absolute; left:50%; bottom:0; width:3px; height:48px; margin-left:-1.5px; border-radius:2px; background:repeating-linear-gradient(to bottom, rgba(255,255,255,.85) 0 3px, rgba(255,255,255,.25) 3px 6px); }
+  .sh-net::after { content:''; position:absolute; left:-60px; right:-60px; bottom:-2px; height:2px; background:rgba(255,255,255,.18); border-radius:2px; }
+  .sh-rally { position:absolute; left:50%; top:0; width:52px; height:52px; margin-left:-26px; animation:rx 1.6s ease-in-out infinite alternate; }
+  .sh-rally svg { width:100%; height:100%; transform-origin:50% 60%; animation:ry .8s cubic-bezier(.3,0,.7,1) infinite alternate, rt 1.6s ease-in-out infinite alternate; }
+  @keyframes rx { from { transform:translateX(-95px); } to { transform:translateX(95px); } }
+  @keyframes ry { from { translate:0 66px; } to { translate:0 0; } }
+  @keyframes rt { from { rotate:-70deg; } to { rotate:70deg; } }
+  .sh-bar { width:170px; height:4px; border-radius:4px; background:rgba(255,255,255,.12); overflow:hidden; }
+  .sh-bar i { display:block; height:100%; width:40%; border-radius:4px; background:linear-gradient(90deg,#F2B705,#FFD54F); animation:bb 1.3s ease-in-out infinite; }
+  @keyframes bb { 0% { transform:translateX(-110%); } 100% { transform:translateX(260%); } }
+  .sh-msg { font-weight:700; letter-spacing:.3px; opacity:.9; }
+  @media (prefers-reduced-motion: reduce) { .sh-rally, .sh-rally svg, .sh-bar i { animation:none; } }
 </style>
 </head>
 <body>
-<div id="app"><div class="boot"><b>🏸</b>Loading…</div></div>
+<div id="app"><div class="sh-boot" role="status"><div class="sh-court"><div class="sh-rally"><svg viewBox="0 0 64 64" aria-hidden="true"><path d="M14 6 L50 6 L39 40 L25 40 Z" fill="#DDE9F5"/><g stroke="#01579B" stroke-width="2.2" stroke-linecap="round"><path d="M14 6 L25 40"/><path d="M23 6 L28.5 40"/><path d="M32 6 L32 40"/><path d="M41 6 L35.5 40"/><path d="M50 6 L39 40"/><path d="M16.5 16 L47.5 16"/><path d="M20 28 L44 28"/><path d="M14 6 L50 6"/></g><path d="M24 40 h16 v4 a8 8 0 0 1 -16 0 Z" fill="#F2B705"/></svg></div><div class="sh-net"></div></div><div class="sh-msg">Opening your page…</div><div class="sh-bar"><i></i></div></div></div>
 <script>
 /*
  * Player page shell (ARCHITECTURE.md §119). This file never changes: it
@@ -83,9 +95,11 @@ if ('serviceWorker' in navigator && location.protocol === 'https:') {
   window.google = { script: { get run() { return runner(null, null); } } };
 
   function fail(msg) {
-    document.getElementById('app').innerHTML = '<div class="boot err"><b>🏸</b></div>';
-    var p = document.createElement('div'); p.className = 'boot err'; p.style.paddingTop = '0'; p.textContent = msg;
-    document.getElementById('app').appendChild(p);
+    var box = document.createElement('div'); box.className = 'sh-boot err';
+    var icon = document.createElement('div'); icon.style.fontSize = '40px'; icon.textContent = '🏸';
+    var p = document.createElement('div'); p.textContent = msg;
+    box.appendChild(icon); box.appendChild(p);
+    var app = document.getElementById('app'); app.innerHTML = ''; app.appendChild(box);
   }
 
   // Puts the page's styles, markup and scripts into this document (scripts
