@@ -7,6 +7,13 @@
 <meta name="referrer" content="no-referrer">
 <meta name="theme-color" content="#1e2a3f">
 <title>🏸 My Badminton</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Badminton">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <style>
   body { margin:0; background:#f4f1ea; color:#1f2a37; font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; }
   .boot { text-align:center; padding:70px 16px; color:#5f6b7a; font-size:15px; }
@@ -28,10 +35,29 @@
  * so the host never sees anyone's token.
  */
 var API = 'https://script.google.com/macros/s/AKfycbwa8rz3l1Qpbhz8o4kQC6lu3uoeOs01cuWexfLgkbDPhfPyR9SCKR5h4l_JmYw4JpfCVQ/exec';
+window.__PLAYER_SHELL = true;
+// Installed-app support (§124): the install prompt (Android/Chrome) is kept
+// for the page's "Install as an app" button, and the service worker makes
+// the page installable.
+window.addEventListener('beforeinstallprompt', function(e) { e.preventDefault(); window.__installPrompt = e; });
+if ('serviceWorker' in navigator && location.protocol === 'https:') {
+  window.addEventListener('load', function() { navigator.serviceWorker.register('sw.js').catch(function() { /* optional */ }); });
+}
 (function() {
   function tokenFromUrl() {
     var m = /(?:^|[#&?])t=([A-Za-z0-9]{24,128})(?:&|$)/.exec(location.hash) || /(?:^|[#&?])t=([A-Za-z0-9]{24,128})(?:&|$)/.exec(location.search);
     return m ? m[1] : '';
+  }
+  // The home-screen app opens at the start page with no #t=…, so the link
+  // is remembered on this phone (the PIN is still needed to see anything).
+  function rememberedToken() {
+    var t = tokenFromUrl();
+    try {
+      if (t) localStorage.setItem('mb_token', t);
+      else t = localStorage.getItem('mb_token') || '';
+    } catch (e) { /* storage blocked */ }
+    if (t && !tokenFromUrl()) { try { history.replaceState(null, '', '#t=' + t); } catch (e) { /* */ } }
+    return /^[A-Za-z0-9]{24,128}$/.test(t) ? t : '';
   }
 
   function call(body) {
@@ -74,7 +100,7 @@ var API = 'https://script.google.com/macros/s/AKfycbwa8rz3l1Qpbhz8o4kQC6lu3uoeOs
   }
 
   if (API.indexOf('https://script.google.com/') !== 0) { fail('This page isn’t set up yet.'); return; }
-  call({ fn: 'page', token: tokenFromUrl() }).then(function(res) {
+  call({ fn: 'page', token: rememberedToken() }).then(function(res) {
     if (!res || !res.html) throw new Error('no page');
     mount(res.html);
   }).catch(function() { fail('Couldn’t load — check your connection and try again.'); });
