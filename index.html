@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#1e2a3f">
+<title>🏸 My Badminton</title>
+<style>
+  body { margin:0; background:#f4f1ea; color:#1f2a37; font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; }
+  .boot { text-align:center; padding:70px 16px; color:#5f6b7a; font-size:15px; }
+  .boot b { display:block; font-size:40px; margin-bottom:8px; animation:bob 1.2s ease-in-out infinite; }
+  .boot.err { color:#B0140A; } .boot.err b { animation:none; }
+  @keyframes bob { 50% { transform:translateY(-6px); } }
+</style>
+</head>
+<body>
+<div id="app"><div class="boot"><b>🏸</b>Loading…</div></div>
+<script>
+/*
+ * Player page shell (ARCHITECTURE.md §119). This file never changes: it
+ * loads the real page from the club's Apps Script (so updates ship with the
+ * normal deploy) and talks to it through a small JSON API. Hosting it here
+ * instead of on script.google.com removes Google's "created by a Google Apps
+ * Script user" banner.
+ * The link is  …/#t=<token>  — the part after # never leaves the phone,
+ * so the host never sees anyone's token.
+ */
+var API = 'https://script.google.com/macros/s/AKfycbwa8rz3l1Qpbhz8o4kQC6lu3uoeOs01cuWexfLgkbDPhfPyR9SCKR5h4l_JmYw4JpfCVQ/exec';
+(function() {
+  function tokenFromUrl() {
+    var m = /(?:^|[#&?])t=([A-Za-z0-9]{24,128})(?:&|$)/.exec(location.hash) || /(?:^|[#&?])t=([A-Za-z0-9]{24,128})(?:&|$)/.exec(location.search);
+    return m ? m[1] : '';
+  }
+
+  function call(body) {
+    // text/plain = a "simple" request, so no CORS preflight (Apps Script can't answer one).
+    return fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body), redirect: 'follow', credentials: 'omit' })
+      .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });
+  }
+
+  // Stand-in for google.script.run, so the page runs here unchanged.
+  function runner(ok, fail) {
+    return new Proxy({}, { get: function(_, name) {
+      if (name === 'withSuccessHandler') return function(f) { return runner(f, fail); };
+      if (name === 'withFailureHandler') return function(f) { return runner(ok, f); };
+      return function() {
+        var args = Array.prototype.slice.call(arguments);
+        call({ fn: name, args: args }).then(function(res) {
+          if (res && Object.prototype.hasOwnProperty.call(res, 'result')) { if (ok) ok(res.result); }
+          else if (fail) fail(new Error((res && res.error) || 'Something went wrong.'));
+        }, function(err) { if (fail) fail(err); });
+      };
+    } });
+  }
+  window.google = { script: { get run() { return runner(null, null); } } };
+
+  function fail(msg) {
+    document.getElementById('app').innerHTML = '<div class="boot err"><b>🏸</b></div>';
+    var p = document.createElement('div'); p.className = 'boot err'; p.style.paddingTop = '0'; p.textContent = msg;
+    document.getElementById('app').appendChild(p);
+  }
+
+  // Puts the page's styles, markup and scripts into this document (scripts
+  // added via innerHTML don't run, so they are re-created in order).
+  function mount(html) {
+    var doc = new DOMParser().parseFromString(html, 'text/html');
+    Array.prototype.forEach.call(doc.head.querySelectorAll('style'), function(s) { document.head.appendChild(document.importNode(s, true)); });
+    var scripts = Array.prototype.slice.call(doc.body.querySelectorAll('script'));
+    scripts.forEach(function(s) { s.parentNode.removeChild(s); });
+    document.body.innerHTML = doc.body.innerHTML;
+    scripts.forEach(function(s) { var n = document.createElement('script'); n.text = s.textContent; document.body.appendChild(n); });
+  }
+
+  if (API.indexOf('https://script.google.com/') !== 0) { fail('This page isn’t set up yet.'); return; }
+  call({ fn: 'page', token: tokenFromUrl() }).then(function(res) {
+    if (!res || !res.html) throw new Error('no page');
+    mount(res.html);
+  }).catch(function() { fail('Couldn’t load — check your connection and try again.'); });
+})();
+</script>
+</body>
+</html>
