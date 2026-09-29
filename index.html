@@ -85,6 +85,12 @@ if ('serviceWorker' in navigator && location.protocol === 'https:') {
       if (name === 'withFailureHandler') return function(f) { return runner(ok, f); };
       return function() {
         var args = Array.prototype.slice.call(arguments);
+        // The first data request is already answered by the boot call.
+        if (name === 'getPortalData' && boot && boot.data && args[0] === boot.token && (args[1] || {}).key === boot.key) {
+          var ready = boot.data; boot = null;
+          setTimeout(function() { if (ok) ok(ready); }, 0);
+          return;
+        }
         call({ fn: name, args: args }).then(function(res) {
           if (res && Object.prototype.hasOwnProperty.call(res, 'result')) { if (ok) ok(res.result); }
           else if (fail) fail(new Error((res && res.error) || 'Something went wrong.'));
@@ -114,7 +120,15 @@ if ('serviceWorker' in navigator && location.protocol === 'https:') {
   }
 
   if (API.indexOf('https://script.google.com/') !== 0) { fail('This page isn’t set up yet.'); return; }
-  call({ fn: 'page', token: rememberedToken() }).then(function(res) {
+  // One request brings both the page and the player's data (§127); an older
+  // server that doesn't know "boot" still answers "page".
+  var token = rememberedToken(), key = '';
+  try { key = token ? localStorage.getItem('mb_key_' + token.slice(0, 12)) || '' : ''; } catch (e) { /* */ }
+  var boot = null;
+  call({ fn: 'boot', token: token, auth: { key: key } }).then(function(res) {
+    if (res && res.html) { boot = { token: token, key: key, data: res.data || null }; return res; }
+    return call({ fn: 'page', token: token });
+  }).then(function(res) {
     if (!res || !res.html) throw new Error('no page');
     mount(res.html);
   }).catch(function() { fail('Couldn’t load — check your connection and try again.'); });
