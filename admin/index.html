@@ -2,176 +2,19 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
-<meta name="referrer" content="no-referrer">
-<meta name="theme-color" content="#16202E">
-<title>⚙ Club Admin</title>
-<link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" type="image/png" sizes="192x192" href="../icon-192.png">
-<link rel="apple-touch-icon" href="../apple-touch-icon.png">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Club Admin">
-<style>
-  :root { --bg:#f4f1ea; --card:#fff; --ink:#1f2a37; --muted:#5b6675; --brand:#01579B; --line:#e4dfd4; --warn:#B0140A; }
-  * { box-sizing:border-box; }
-  body { margin:0; background:var(--bg); color:var(--ink); font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; font-size:15px; line-height:1.45; }
-  header { background:#16202E; color:#fff; padding:14px 16px calc(14px); padding-top:max(14px, env(safe-area-inset-top)); display:flex; align-items:center; gap:10px; }
-  header h1 { font-size:18px; margin:0; flex:1; }
-  header .club { font-size:13px; opacity:.75; }
-  main { max-width:640px; margin:0 auto; padding:14px 16px 40px; }
-  .card { background:var(--card); border-radius:14px; padding:14px 16px; margin-bottom:12px; box-shadow:0 1px 2px rgba(0,0,0,.06); }
-  .card h2 { font-size:15px; margin:0 0 8px; display:flex; align-items:center; gap:8px; }
-  .count { background:var(--warn); color:#fff; border-radius:10px; font-size:12px; padding:1px 8px; }
-  .row { padding:8px 0; border-top:1px solid var(--line); display:flex; gap:10px; align-items:baseline; }
-  .row:first-of-type { border-top:0; }
-  .row .who { font-weight:600; flex:1; min-width:0; overflow-wrap:anywhere; }
-  .row .amt { font-weight:700; white-space:nowrap; }
-  .muted { color:var(--muted); font-size:13px; }
-  .btn { font:inherit; font-weight:700; min-height:44px; padding:10px 16px; border-radius:12px; border:1px solid var(--line); background:#fff; color:var(--ink); cursor:pointer; width:100%; display:block; text-align:center; text-decoration:none; }
-  .btn.primary { background:var(--brand); color:#fff; border-color:var(--brand); }
-  .btn + .btn { margin-top:8px; }
-  .empty { color:var(--muted); font-size:14px; }
-  .unread { font-weight:600; }
-  .load { text-align:center; padding:60px 0; color:var(--muted); }
-  .spin { width:28px; height:28px; border-radius:50%; border:3px solid #d7dde6; border-top-color:var(--brand); margin:0 auto 12px; animation:spin .9s linear infinite; }
-  @keyframes spin { to { transform:rotate(360deg); } }
-  @media (prefers-reduced-motion: reduce) { .spin { animation:none; } }
-  .err { color:var(--warn); }
-  .toast { position:fixed; left:16px; right:16px; bottom:max(16px, env(safe-area-inset-bottom)); background:#16202E; color:#fff; border-radius:12px; padding:12px 14px; text-align:center; font-size:14px; }
-</style>
+<title>Moved</title>
+<style>body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#f4f1ea;color:#1f2a37;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;text-align:center;padding:24px;box-sizing:border-box}</style>
 </head>
 <body>
-<header><h1>⚙ Club Admin</h1><span class="club" id="club"></span></header>
-<main id="main"><div class="load" role="status"><div class="spin" aria-hidden="true"></div>Getting the club ready…</div></main>
+<p>The admin phone app has been removed. Taking you to the player page…</p>
 <script>
-/*
- * The club admin's phone app (ARCHITECTURE.md §140): what's waiting and
- * alerts for new payments and messages. The link is  …/admin/#a=<key>  —
- * made in the admin app (Settings → Player page). The key is kept on this
- * phone; the part after # never reaches the web host. Confirming a payment
- * or answering a message happens in the admin app itself.
- */
-var API = 'https://script.google.com/macros/s/AKfycbwa8rz3l1Qpbhz8o4kQC6lu3uoeOs01cuWexfLgkbDPhfPyR9SCKR5h4l_JmYw4JpfCVQ/exec';
-var KEY_STORE = 'mb_admin_key';
-var ALERTS_ON = 'mb_admin_alerts';
-var KEY = (function() {
-  var m = /[#&]a=([A-Za-z0-9]{40,128})/.exec(location.hash || '');
-  try {
-    if (m) { localStorage.setItem(KEY_STORE, m[1]); history.replaceState(null, '', location.pathname); return m[1]; }
-    return localStorage.getItem(KEY_STORE) || '';
-  } catch (e) { return m ? m[1] : ''; }
-})();
-var DATA = null;
-
-function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function(c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
-function money(v, cur) { return (cur || '₹') + Number(v || 0).toLocaleString('en-IN'); }
-function toast(m) { var t = document.createElement('div'); t.className = 'toast'; t.textContent = m; document.body.appendChild(t); setTimeout(function() { t.remove(); }, 2600); }
-
-function call(fn, args) {
-  return fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ fn: fn, args: args }), redirect: 'follow', credentials: 'omit' })
-    .then(function(r) { return r.json(); }).then(function(j) { if (!j || j.error) throw new Error((j && j.error) || 'No answer'); return j.result; });
-}
-
-function alertsSupport() {
-  if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) return 'no';
-  if (Notification.permission === 'denied') return 'blocked';
-  return 'yes';
-}
-function alertsOn() { try { return localStorage.getItem(ALERTS_ON) === '1' && Notification.permission === 'granted'; } catch (e) { return false; } }
-function b64ToBytes(s) { s = String(s).replace(/-/g, '+').replace(/_/g, '/'); while (s.length % 4) s += '='; var raw = atob(s), out = new Uint8Array(raw.length); for (var i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i); return out; }
-function tellWorker(msg) { try { if (navigator.serviceWorker) navigator.serviceWorker.ready.then(function(r) { if (r.active) r.active.postMessage(msg); }); } catch (e) { /* */ } }
-
-function render(d) {
-  var main = document.getElementById('main');
-  if (!KEY) { main.innerHTML = '<div class="card"><h2>Open your admin link</h2><div class="muted">Make it in the admin app: Settings → Player page → Admin app on your phone. Then open it on this phone.</div></div>'; return; }
-  if (!d) return;
-  if (!d.success) {
-    main.innerHTML = '<div class="card"><h2 class="err">Can’t open</h2><div class="muted">' + esc(d.message || 'Something went wrong.') + '</div>' +
-      '<button class="btn" style="margin-top:12px" data-retry="1">↻ Try again</button></div>';
-    return;
-  }
-  document.getElementById('club').textContent = d.club || '';
-  var cur = d.currency;
-  var total = (d.claims || []).reduce(function(t, c) { return t + c.amount; }, 0);
-  var h = '';
-  h += '<div class="card"><h2>💰 Payments to confirm' + (d.claims.length ? ' <span class="count">' + d.claims.length + '</span>' : '') + '</h2>' +
-    (d.claims.length ? d.claims.map(function(c) { return '<div class="row"><span class="who">' + esc(c.player) + '<div class="muted">' + esc(c.mode) + (c.ref ? ' · ' + esc(c.ref) : '') + ' · ' + esc(c.time) + '</div></span><span class="amt">' + money(c.amount, cur) + '</span></div>'; }).join('') +
-      '<div class="muted" style="margin-top:6px">Total ' + money(total, cur) + '</div>'
-      : '<div class="empty">Nothing to confirm. ✓</div>') + '</div>';
-  h += '<div class="card"><h2>✉️ Messages' + (d.requests.length ? ' <span class="count">' + d.requests.length + '</span>' : '') + '</h2>' +
-    (d.requests.length ? d.requests.map(function(r) { return '<div class="row"><span class="who">' + esc(r.player) + ' · ' + esc(r.type) + '<div class="muted">' + esc(r.text) + ' · ' + esc(r.time) + '</div></span></div>'; }).join('')
-      : '<div class="empty">No messages waiting. ✓</div>') + '</div>';
-  h += d.adminUrl ? '<a class="btn primary" href="' + esc(d.adminUrl) + '" target="_blank" rel="noopener">Open the admin app to confirm or reply</a>' : '';
-  h += '<div class="card" style="margin-top:12px"><h2>🔔 Alerts</h2>' + alertsHtml(d) + '</div>';
-  if (d.updates && d.updates.length) {
-    h += '<div class="card"><h2>Recent</h2>' + d.updates.map(function(u) { return '<div class="row"><span class="who' + (u.unread ? ' unread' : '') + '">' + esc(u.title) + '<div class="muted">' + esc(u.message) + ' · ' + esc(u.time) + '</div></span></div>'; }).join('') + '</div>';
-  }
-  h += '<button class="btn" data-retry="1">↻ Refresh</button>';
-  main.innerHTML = h;
-}
-function alertsHtml(d) {
-  var sup = alertsSupport();
-  if (!d.pushKey) return '<div class="muted">Phone notifications aren’t set up for the club yet (DEPLOY.md → Phone notifications).</div>';
-  if (sup === 'no') return '<div class="muted">This browser can’t show alerts. On iPhone, add this page to the Home Screen first and open it from there.</div>';
-  if (sup === 'blocked') return '<div class="muted">Alerts are blocked for this page — allow them in the phone’s settings.</div>';
-  var on = alertsOn();
-  return '<div class="muted" style="margin-bottom:10px">' + (on ? '✓ On — you’ll get an alert when a player reports a payment or sends a message.' : 'Get an alert when a player reports a payment or sends a message.') + '</div>' +
-    '<button class="btn' + (on ? '' : ' primary') + '" data-alerts="' + (on ? 'off' : 'on') + '">' + (on ? 'Turn off on this phone' : '🔔 Turn on alerts') + '</button>';
-}
-
-function alertsToggle(on, btn) {
-  btn.disabled = true;
-  var done = function(msg) { toast(msg); render(DATA); };
-  var device = (navigator.userAgent || '').replace(/^.*?\(([^)]*)\).*$/, '$1').slice(0, 60);
-  if (!on) {
-    navigator.serviceWorker.ready.then(function(reg) { return reg.pushManager.getSubscription(); }).then(function(sub) {
-      try { localStorage.removeItem(ALERTS_ON); } catch (e) { /* */ }
-      tellWorker({ type: 'forget' });
-      if (!sub) return done('Alerts are off.');
-      var j = sub.toJSON(); sub.unsubscribe();
-      return call('adminPush', [KEY, { endpoint: j.endpoint }, false]).then(function(r) { done(r.message); }, function() { done('Turned off on this phone.'); });
-    }).catch(function() { done('Couldn’t turn them off — try again.'); });
-    return;
-  }
-  Notification.requestPermission().then(function(p) {
-    if (p !== 'granted') throw new Error('denied');
-    return navigator.serviceWorker.ready;
-  }).then(function(reg) {
-    return reg.pushManager.getSubscription().then(function(s) { return s || reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64ToBytes(DATA.pushKey) }); });
-  }).then(function(sub) {
-    return call('adminPush', [KEY, { endpoint: sub.toJSON().endpoint, device: device }, true]);
-  }).then(function(r) {
-    if (r && r.success) { try { localStorage.setItem(ALERTS_ON, '1'); } catch (e) { /* */ } tellWorker({ type: 'auth', api: API, key: KEY }); }
-    done((r && r.message) || 'Couldn’t turn them on.');
-  }).catch(function(e) { done(e && e.message === 'denied' ? 'Alerts weren’t allowed — you can allow them in the phone’s settings.' : 'This phone couldn’t turn on alerts.'); });
-}
-
-function load() {
-  if (!KEY) { render(null); return; }
-  call('adminSummary', [KEY]).then(function(d) {
-    DATA = d; render(d);
-    if (d && d.success && alertsOn()) tellWorker({ type: 'auth', api: API, key: KEY });
-  }, function() {
-    DATA = { success: false, message: 'No connection — check the internet and try again.' }; render(DATA);
-  });
-}
-
-document.addEventListener('click', function(e) {
-  var t = e.target.closest ? e.target.closest('[data-retry],[data-alerts]') : null;
-  if (!t) return;
-  if (t.hasAttribute('data-retry')) { document.getElementById('main').innerHTML = '<div class="load" role="status"><div class="spin" aria-hidden="true"></div>Loading…</div>'; load(); }
-  else alertsToggle(t.getAttribute('data-alerts') === 'on', t);
-});
-if ('serviceWorker' in navigator && window.isSecureContext) {
-  try {
-    navigator.serviceWorker.register('sw.js', { scope: './' }).catch(function() { /* */ });
-    navigator.serviceWorker.addEventListener('message', function(e) { if (e.data && e.data.type === 'refresh') load(); });
-  } catch (e) { /* */ }
-}
-document.addEventListener('visibilitychange', function() { if (document.visibilityState === 'visible' && DATA && DATA.success) load(); });
-if (!KEY) render(null); else load();
+/* Removed (ARCHITECTURE.md §140): forget its saved key, unregister its service worker, go to the player page. */
+try { localStorage.removeItem('mb_admin_key'); localStorage.removeItem('mb_admin_alerts'); } catch (e) { /* */ }
+(navigator.serviceWorker && navigator.serviceWorker.getRegistrations ? navigator.serviceWorker.getRegistrations() : Promise.resolve([]))
+  .then(function(regs) { return Promise.all(regs.filter(function(r) { return /\/admin\/$/.test(r.scope); }).map(function(r) { return r.unregister(); })); })
+  .catch(function() {}).then(function() { location.replace('../'); });
 </script>
 </body>
 </html>
