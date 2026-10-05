@@ -59,13 +59,21 @@
   var key = m ? m[1] : '';
   var app = document.getElementById('app');
   var esc = function(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function(c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
-  var timer = null, last = null;
+  var timer = null, last = null, busy = false, misses = 0;
+  var TIMEOUT_MS = 20000;
 
+  // §156: a stuck request gives up after 20 s, so the page never hangs on it.
   function call(body) {
-    return fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body), redirect: 'follow', credentials: 'omit' })
-      .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });
+    var ctl = typeof AbortController === 'function' ? new AbortController() : null;
+    var t = ctl ? setTimeout(function() { ctl.abort(); }, TIMEOUT_MS) : null;
+    return fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body), redirect: 'follow', credentials: 'omit', signal: ctl ? ctl.signal : undefined })
+      .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(function(j) { clearTimeout(t); return j; }, function(e) { clearTimeout(t); throw e; });
   }
-  function fail(msg) { app.innerHTML = '<div class="err">' + esc(msg) + '</div>'; }
+  function fail(msg, retry) {
+    app.innerHTML = '<div class="err">' + esc(msg) + (retry ? '<div style="margin-top:14px"><button type="button" class="btn" id="retry">↻ Try again</button></div>' : '') + '</div>';
+    var b = document.getElementById('retry'); if (b) b.onclick = function() { load(true); };
+  }
 
   function side(name, winner) { return name === winner ? '<span class="w">' + esc(name) + '</span>' : esc(name); }
 
@@ -103,15 +111,34 @@
     var b = document.getElementById('refresh'); if (b) b.onclick = function() { load(true); };
   }
 
+  // Keeps what's on screen and says the refresh failed (§156) — a dropped
+  // connection at the hall used to blank the page.
+  function staleNote() {
+    var f = document.querySelector('.foot');
+    if (f) f.textContent = 'Couldn’t refresh — showing the scores from ' + (last.updated || 'earlier') + '. Trying again…';
+  }
+
   function load(manual) {
     if (document.hidden && !manual) return;
+    if (busy) return;                                      // one request at a time
+    // After failures, the automatic refresh slows down (30 s, 60 s, … 5 min).
+    if (!manual && misses && (Date.now() - (load.at || 0)) < Math.min(REFRESH_MS * Math.pow(2, misses), 300000)) return;
+    busy = true; load.at = Date.now();
     call({ fn: 'liveCup', args: [key] }).then(function(res) {
+      busy = false;
       var r = res && res.result;
-      if (!r || !r.success) { fail((r && r.message) || 'Couldn’t load the cup.'); return; }
+      if (!r || !r.success) {
+        if (last && !(r && r.message && /valid/.test(r.message))) { misses++; staleNote(); return; }
+        fail((r && r.message) || 'Couldn’t load the cup.'); return;
+      }
+      misses = 0;
       last = r.cup;
       render(r.cup);
       if (r.cup.status !== 'Active' && timer) { clearInterval(timer); timer = null; }
-    }).catch(function() { if (!last) fail('Couldn’t load — check your connection and try again.'); });
+    }).catch(function() {
+      busy = false; misses++;
+      if (last) staleNote(); else fail('Couldn’t load — check your connection and try again.', true);
+    });
   }
 
   if (API.indexOf('https://script.google.com/') !== 0) { fail('This page isn’t set up yet.'); return; }

@@ -101,16 +101,21 @@ if ('serviceWorker' in navigator && (window.isSecureContext || location.protocol
       if (name === 'withFailureHandler') return function(f) { return runner(ok, f); };
       return function() {
         var args = Array.prototype.slice.call(arguments);
+        var send = function() {
+          call({ fn: name, args: args }).then(function(res) {
+            if (res && Object.prototype.hasOwnProperty.call(res, 'result')) { if (ok) ok(res.result); }
+            else if (fail) fail(new Error((res && res.error) || 'Something went wrong.'));
+          }, function(err) { if (fail) fail(err); });
+        };
         // The first data request is already answered by the boot call.
-        if (name === 'getPortalData' && boot && boot.data && args[0] === boot.token && (args[1] || {}).key === boot.key) {
-          var ready = boot.data; boot = null;
-          setTimeout(function() { if (ok) ok(ready); }, 0);
-          return;
+        if (name === 'getPortalData' && boot && args[0] === boot.token && (args[1] || {}).key === boot.key) {
+          var b = boot; boot = null;
+          if (b.data) { setTimeout(function() { if (ok) ok(b.data); }, 0); return; }
+          // Opened from this phone's saved copy (§156): the boot call is still
+          // on its way — its data answers this request.
+          if (b.pending) { b.pending.then(function(res) { if (res && res.data) { if (ok) ok(res.data); } else send(); }, function(err) { if (fail) fail(err); }); return; }
         }
-        call({ fn: name, args: args }).then(function(res) {
-          if (res && Object.prototype.hasOwnProperty.call(res, 'result')) { if (ok) ok(res.result); }
-          else if (fail) fail(new Error((res && res.error) || 'Something went wrong.'));
-        }, function(err) { if (fail) fail(err); });
+        send();
       };
     } });
   }
@@ -148,6 +153,23 @@ if ('serviceWorker' in navigator && (window.isSecureContext || location.protocol
   var token = rememberedToken(), key = '';
   try { key = token ? localStorage.getItem('mb_key_' + token.slice(0, 12)) || '' : ''; } catch (e) { /* */ }
   var boot = null;
+  // §156: a phone that has its page and a recent copy of the player's data
+  // opens that at once and refreshes it in the background — no waiting on
+  // Google's start-up (often 5–15 s) to see your balance.
+  var quick = '';
+  try {
+    var kk = /^(\d{13})\./.exec(key);
+    quick = token && kk && Number(kk[1]) > Date.now() && localStorage.getItem('mb_snap_' + token.slice(0, 12)) ? localStorage.getItem('mb_page') || '' : '';
+  } catch (e) { quick = ''; }
+  if (!(quick && /id="app"/.test(quick) && quick.indexOf("'" + token + "'") !== -1)) quick = '';
+  if (quick) {
+    var pending = call({ fn: 'boot', token: token, auth: { key: key } });
+    boot = { token: token, key: key, data: null, pending: pending };
+    // The fresh page is kept for next time (a new version shows on the next open).
+    pending.then(function(res) { if (res && res.html && res.html !== quick) { try { localStorage.setItem('mb_page', res.html); } catch (e) { /* */ } } }, function() { /* the page shows its offline copy */ });
+    mount(quick);
+    return;
+  }
   call({ fn: 'boot', token: token, auth: { key: key } }).then(function(res) {
     if (res && res.html) { boot = { token: token, key: key, data: res.data || null }; return res; }
     return call({ fn: 'page', token: token });
